@@ -3,7 +3,7 @@ import './App.css'
 
 function App() {
   const [message, setMessage] = useState('')
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxPzPgx4isUCFAARhaqgBvF2V_u3Hr2Xd8s8Ln1rpLIhlQkmJeuKKbkRAUWo4U9z5-q/exec'
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyf-4M8YuFIbrKMfLVKprKUih5agC3Oh9n13_ZWnrwPJ5ZpdoWy67OfHxvEn60RZjQN/exec'
 
   const testAPI = async () => {
     setMessage('Đang gọi về Google Sheets...')
