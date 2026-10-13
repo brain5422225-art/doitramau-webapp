@@ -3,17 +3,21 @@ import './App.css'
 
 function App() {
   const [message, setMessage] = useState('')
+  // Dán đường link API MỚI của bạn vào đây:
   const API_URL = 'https://script.google.com/macros/s/AKfycbyf-4M8YuFIbrKMfLVKprKUih5agC3Oh9n13_ZWnrwPJ5ZpdoWy67OfHxvEn60RZjQN/exec'
 
   const testAPI = async () => {
     setMessage('Đang gọi về Google Sheets...')
     try {
-      const response = await fetch(API_URL)
+      // Đã thêm tuỳ chọn redirect: 'follow' để vượt tường lửa Google
+      const response = await fetch(API_URL, {
+        method: 'GET',
+        redirect: 'follow'
+      })
       const data = await response.json()
       setMessage('✅ ' + data.message)
     } catch (error) {
-      // Đã thêm (error as Error) để Netlify hiểu đúng chuẩn TypeScript
-      setMessage('❌ Lỗi kết nối: ' + (error as Error).message)
+      setMessage('❌ Lỗi kết nối: ' + (error as Error).message + ' (Hãy kiểm tra lại quyền Anyone trên Apps Script)')
     }
   }
 
