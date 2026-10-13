@@ -3,7 +3,6 @@ import './App.css'
 
 function App() {
   const [message, setMessage] = useState('')
-  // Đây chính là đường link API bạn vừa tạo
   const API_URL = 'https://script.google.com/macros/s/AKfycbxPzPgx4isUCFAARhaqgBvF2V_u3Hr2Xd8s8Ln1rpLIhlQkmJeuKKbkRAUWo4U9z5-q/exec'
 
   const testAPI = async () => {
@@ -13,7 +12,8 @@ function App() {
       const data = await response.json()
       setMessage('✅ ' + data.message)
     } catch (error) {
-      setMessage('❌ Lỗi kết nối: ' + error.message)
+      // Đã thêm (error as Error) để Netlify hiểu đúng chuẩn TypeScript
+      setMessage('❌ Lỗi kết nối: ' + (error as Error).message)
     }
   }
 
