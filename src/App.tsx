@@ -1,45 +1,112 @@
-import { useState } from 'react'
+import { useState, FormEvent } from 'react'
 import './App.css'
 
 function App() {
+  const [barcode, setBarcode] = useState('')
+  const [bloodBag, setBloodBag] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  // Dán đường link API MỚI của bạn vào đây:
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxNRYIbKKlDmJ-QIynXlQlm7vm1R2KL1shwC7pXddzGjGWECv3JgDblxvQ8OGLSbsaM/exec'
 
-  const testAPI = async () => {
-    setMessage('Đang gọi về Google Sheets...')
+  // Đường link API của bạn (giữ nguyên)
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxPzPgx4isUCFAARhaqgBvF2V_u3Hr2Xd8s8Ln1rpLIhlQkmJeuKKbkRAUWo4U9z5-q/exec'
+
+  const handleScan = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!barcode) return
+    
+    setLoading(true)
+    setMessage('Đang kết nối Database tìm túi máu: ' + barcode + '...')
+    
     try {
-      // Đã thêm tuỳ chọn redirect: 'follow' để vượt tường lửa Google
-      const response = await fetch(API_URL, {
+      // Gửi mã barcode về Apps Script kèm theo lệnh action=search
+      const response = await fetch(`${API_URL}?action=search&id=${barcode}`, {
         method: 'GET',
         redirect: 'follow'
       })
       const data = await response.json()
-      setMessage('✅ ' + data.message)
+      
+      // TẠM THỜI: Dùng dữ liệu giả lập để bạn xem trước giao diện. 
+      // Ở bước tiếp theo, ta sẽ viết code Apps Script để nó trả về dữ liệu thật từ Google Sheets.
+      setBloodBag({
+        id: barcode,
+        nhomMau: 'O Rh(D)+',
+        theTich: '250ml',
+        loaiChePham: 'Khối hồng cầu',
+        hanSuDung: '30/11/2026'
+      })
+      setMessage('✅ Tìm thấy thông tin túi máu (Dữ liệu mô phỏng)!')
+      
     } catch (error) {
-      setMessage('❌ Lỗi kết nối: ' + (error as Error).message + ' (Hãy kiểm tra lại quyền Anyone trên Apps Script)')
+      setMessage('❌ Lỗi kết nối: ' + (error as Error).message)
+      setBloodBag(null)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-      <h2 style={{ color: '#0056b3' }}>MODULE QUẢN LÝ ĐỔI TRẢ & CHO MƯỢN MÁU</h2>
-      <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-        <p>Bước 4: Kiểm tra kết nối 2 chiều giữa Netlify và Google Sheets</p>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
+      <h2 style={{ color: '#0056b3', textAlign: 'center', marginBottom: '30px', textTransform: 'uppercase' }}>
+        Phần mềm Quản lý Đổi/Mượn máu
+      </h2>
+      
+      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
         
-        <button 
-          onClick={testAPI}
-          style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}
-        >
-          Kiểm tra kết nối Database
-        </button>
-        
-        {message && (
-          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#e9ecef', borderRadius: '5px', fontWeight: 'bold' }}>
-            {message}
-          </div>
-        )}
+        {/* --- CỘT 1: TÚI MÁU XUẤT ĐI --- */}
+        <div style={{ flex: '1', minWidth: '300px', backgroundColor: '#fdfbfb', padding: '20px', borderRadius: '8px', border: '2px solid #ffc107', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <h3 style={{ color: '#d9534f', marginTop: 0, borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
+            📤 TÚI MÁU XUẤT ĐI
+          </h3>
+          
+          <form onSubmit={handleScan} style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: '20px' }}>
+            <input 
+              type="text" 
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value)}
+              placeholder="Quét mã vạch túi xuất..."
+              style={{ flex: '1', padding: '12px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ccc' }}
+              autoFocus
+            />
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{ padding: '12px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+            >
+              {loading ? 'Đang tìm...' : 'Tìm kiếm'}
+            </button>
+          </form>
+
+          {message && <div style={{ marginBottom: '15px', color: message.includes('❌') ? 'red' : 'green', fontWeight: 'bold', fontSize: '14px' }}>{message}</div>}
+
+          {bloodBag && (
+            <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '4px', border: '1px dashed #d9534f' }}>
+              <p style={{ margin: '8px 0' }}><strong>Mã túi:</strong> {bloodBag.id}</p>
+              <p style={{ margin: '8px 0' }}><strong>Nhóm máu:</strong> <span style={{ color: 'red', fontWeight: 'bold', fontSize: '18px' }}>{bloodBag.nhomMau}</span></p>
+              <p style={{ margin: '8px 0' }}><strong>Loại chế phẩm:</strong> {bloodBag.loaiChePham}</p>
+              <p style={{ margin: '8px 0' }}><strong>Thể tích:</strong> {bloodBag.theTich}</p>
+              <p style={{ margin: '8px 0' }}><strong>Hạn sử dụng:</strong> {bloodBag.hanSuDung}</p>
+            </div>
+          )}
+        </div>
+
+        {/* --- CỘT 2: TÚI MÁU NHẬN VỀ --- */}
+        <div style={{ flex: '1', minWidth: '300px', backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px', border: '2px solid #5cb85c', opacity: bloodBag ? 1 : 0.6, transition: 'opacity 0.3s' }}>
+          <h3 style={{ color: '#5cb85c', marginTop: 0, borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
+            📥 TÚI MÁU NHẬN VỀ (BÙ)
+          </h3>
+          {!bloodBag ? (
+            <p style={{ fontStyle: 'italic', color: '#666', marginTop: '20px' }}>
+              Vui lòng quét túi máu xuất đi để kích hoạt khung nhập túi nhận về.
+            </p>
+          ) : (
+            <div style={{ marginTop: '20px' }}>
+              <p style={{ fontStyle: 'italic', color: '#666' }}>Tính năng này đang được xây dựng...</p>
+              {/* Form nhập túi về sẽ được thêm vào ở bước sau */}
+            </div>
+          )}
+        </div>
       </div>
+      
     </div>
   )
 }
