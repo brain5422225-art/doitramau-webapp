@@ -1,4 +1,5 @@
-import { useState, FormEvent } from 'react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import './App.css'
 
 function App() {
@@ -7,7 +8,7 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  // Đường link API của bạn (giữ nguyên)
+  // Đường link API của bạn
   const API_URL = 'https://script.google.com/macros/s/AKfycbxPzPgx4isUCFAARhaqgBvF2V_u3Hr2Xd8s8Ln1rpLIhlQkmJeuKKbkRAUWo4U9z5-q/exec'
 
   const handleScan = async (e: FormEvent) => {
@@ -18,15 +19,16 @@ function App() {
     setMessage('Đang kết nối Database tìm túi máu: ' + barcode + '...')
     
     try {
-      // Gửi mã barcode về Apps Script kèm theo lệnh action=search
       const response = await fetch(`${API_URL}?action=search&id=${barcode}`, {
         method: 'GET',
         redirect: 'follow'
       })
-      const data = await response.json()
       
-      // TẠM THỜI: Dùng dữ liệu giả lập để bạn xem trước giao diện. 
-      // Ở bước tiếp theo, ta sẽ viết code Apps Script để nó trả về dữ liệu thật từ Google Sheets.
+      // Sửa lỗi TS6133: Cho in biến data ra để Netlify không báo lỗi biến dư thừa
+      const data = await response.json()
+      console.log('Dữ liệu từ Apps Script trả về:', data)
+      
+      // TẠM THỜI: Dùng dữ liệu giả lập để bạn xem trước giao diện
       setBloodBag({
         id: barcode,
         nhomMau: 'O Rh(D)+',
