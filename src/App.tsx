@@ -13,8 +13,8 @@ function App() {
   const [bloodBagIn, setBloodBagIn] = useState<any>(null)
   const [messageIn, setMessageIn] = useState('')
 
-  // ĐIỀN ĐƯỜNG LINK API MỚI VÀO ĐÂY:
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxNRYIbKKlDmJ-QIynXlQlm7vm1R2KL1shwC7pXddzGjGWECv3JgDblxvQ8OGLSbsaM/exec'
+  // ĐIỀN ĐƯỜNG LINK API CỦA BẠN VÀO ĐÂY:
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxPzPgx4isUCFAARhaqgBvF2V_u3Hr2Xd8s8Ln1rpLIhlQkmJeuKKbkRAUWo4U9z5-q/exec'
 
   const formatMedicalDate = (dateString: string) => {
     if (!dateString) return '---';
@@ -26,16 +26,26 @@ function App() {
     return dateString;
   }
 
-  // Xử lý quét túi xuất (Cột 1)
+  // XỬ LÝ QUÉT TÚI XUẤT (CỘT 1)
   const handleScanOut = async (e: FormEvent) => {
     e.preventDefault()
     if (!barcode) return
     
+    // Nếu quét mã QR dài, tự động bóc tách lấy Mã Túi Máu (Thành phần thứ 2) để tìm kiếm
+    let queryId = barcode.trim();
+    if (queryId.includes('|')) {
+      const parts = queryId.split('|');
+      if (parts.length > 1) {
+        queryId = parts[1]; 
+        setBarcode(queryId); // Rút gọn chuỗi dài trên ô input cho đẹp
+      }
+    }
+
     setLoading(true)
     setMessage('Đang truy xuất hệ thống...')
     
     try {
-      const response = await fetch(`${API_URL}?action=search&id=${barcode}`, {
+      const response = await fetch(`${API_URL}?action=search&id=${queryId}`, {
         method: 'GET',
         redirect: 'follow'
       })
@@ -60,21 +70,23 @@ function App() {
     }
   }
 
-  // Xử lý bóc tách chuỗi mã vạch túi nhận (Cột 2)
+  // XỬ LÝ BÓC TÁCH MÃ VẠCH TÚI NHẬN (CỘT 2)
   const handleScanIn = (e: FormEvent) => {
     e.preventDefault()
     if (!barcodeIn) return
-
-    // Định dạng mong đợi: Mã vạch quét|Mã Túi Máu|Loại Chế Phẩm|Thể Tích|Nhóm Máu (chứa ABO/Rh)|Rh|Ngày Điều Chế|Hạn Sử Dụng
-    // Ví dụ: CD26-062923|CD26-062923|KHC|350|B/RH(+)|+|26/09/2026|07/11/2026
     
     const parts = barcodeIn.split('|');
     
-    // Nếu quét chuỗi dài hợp lệ
     if (parts.length >= 8) {
-      // Chuẩn hóa nhóm máu từ B/RH(+) thành B+ (hoặc theo logic của bạn)
-      let rawBloodGroup = parts[4];
-      let displayBloodGroup = rawBloodGroup.replace('/RH', '').replace('(+)', '+').replace('(-)', '-');
+      // Bóc tách chính xác Nhóm máu + Dấu Rh
+      let abo = parts[4].replace('/RH', '').replace(/\(\+\)/g, '').replace(/\(-\)/g, '').trim();
+      let rh = parts[5].trim();
+      
+      // Tránh lặp dấu (nếu abo đã là 'AB+' thì không ghép thêm '+')
+      if (abo.endsWith('+') || abo.endsWith('-')) {
+        rh = ''; 
+      }
+      let displayBloodGroup = `${abo}${rh}`;
 
       const extractedData = {
         maVach: parts[0],
@@ -83,8 +95,7 @@ function App() {
         theTich: parts[3],
         nhomMau: displayBloodGroup, 
         ngayDieuChe: parts[6],
-        hanSuDung: parts[7],
-        trangThai: 'Tồn Kho (Dự kiến)' // Sẽ cập nhật khi lưu vào DB
+        hanSuDung: parts[7]
       };
       
       setBloodBagIn(extractedData);
@@ -94,30 +105,33 @@ function App() {
         let isSafe = true;
         let warningMsg = '';
 
-        // Tạm thời chuẩn hóa sơ bộ để so sánh (có thể cần điều chỉnh tùy dữ liệu thực tế)
-        const outNhomMau = (bloodBag.nhomMau || '').replace(/\s+/g, '').toUpperCase();
-        const inNhomMau = (displayBloodGroup || '').replace(/\s+/g, '').toUpperCase();
+        // Hàm chuẩn hóa chuỗi để so sánh (Loại bỏ khoảng trắng và chữ Rh(D) nếu có)
+        const normalizeBG = (bg: string) => {
+          return (bg || '').toUpperCase().replace(/RH\(D\)/g, '').replace(/\s+/g, '');
+        }
+
+        const outNhomMau = normalizeBG(bloodBag.nhomMau);
+        const inNhomMau = normalizeBG(displayBloodGroup);
 
         if (outNhomMau !== inNhomMau) {
            isSafe = false;
-           warningMsg += 'CẢNH BÁO: BẤT ĐỒNG NHÓM MÁU. ';
+           warningMsg += 'BẤT ĐỒNG NHÓM MÁU. ';
         }
         
         if (String(bloodBag.theTich) !== String(extractedData.theTich)) {
            isSafe = false;
-           warningMsg += 'CẢNH BÁO: LỆCH THỂ TÍCH. ';
+           warningMsg += 'LỆCH THỂ TÍCH. ';
         }
 
         if (isSafe) {
           setMessageIn('✅ THÔNG TIN KHỚP. ĐỦ ĐIỀU KIỆN ĐỔI.');
         } else {
-          setMessageIn('❌ ' + warningMsg);
+          setMessageIn('❌ CẢNH BÁO: ' + warningMsg);
         }
       }
 
     } else {
-       // Nếu quét bằng tay (không có dấu |)
-       setMessageIn('❌ ĐỊNH DẠNG MÃ VẠCH KHÔNG HỢP LỆ (Thiếu dấu |)');
+       setMessageIn('❌ ĐỊNH DẠNG MÃ QR KHÔNG HỢP LỆ');
        setBloodBagIn(null);
     }
   }
@@ -133,7 +147,7 @@ function App() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '1200px', margin: '30px auto', padding: '0 20px' }}>
+      <div style={{ maxWidth: '1250px', margin: '30px auto', padding: '0 20px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '30px' }}>
           
           {/* ================= CỘT 1: TÚI MÁU XUẤT ================= */}
@@ -150,12 +164,12 @@ function App() {
                   type="text" 
                   value={barcode}
                   onChange={(e) => setBarcode(e.target.value)}
-                  placeholder="Quét mã vạch túi xuất đi..."
+                  placeholder="Quét mã vạch hoặc mã QR túi xuất đi..."
                   style={{ flex: '1', padding: '10px 15px', fontSize: '16px', border: '1px solid #CED4DA', outline: 'none' }}
                   autoFocus
                 />
                 <button type="submit" disabled={loading} style={{ padding: '0 25px', backgroundColor: loading ? '#6C757D' : '#0056B3', color: 'white', border: 'none', cursor: loading ? 'wait' : 'pointer', fontWeight: 'bold' }}>
-                  {loading ? 'Đang xử lý...' : 'Truy xuất'}
+                  {loading ? 'Đang truy xuất...' : 'Truy xuất'}
                 </button>
               </form>
 
@@ -171,12 +185,17 @@ function App() {
                     <div style={{ fontSize: '12px', color: '#6C757D', fontWeight: 'bold' }}>NHÓM MÁU</div>
                     <div style={{ fontSize: '42px', fontWeight: '900', color: '#BE1128', marginTop: '5px' }}>{bloodBag.nhomMau || '---'}</div>
                   </div>
+                  
+                  {/* Bảng full chi tiết */}
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                     <tbody>
-                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '35%', fontWeight: 'bold' }}>Mã Túi</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBag.maTui}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '35%', fontWeight: 'bold' }}>Mã Vạch Cấp</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBag.maVach}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Mã Túi Máu</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold' }}>{bloodBag.maTui}</td></tr>
                       <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Chế Phẩm</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBag.loaiChePham}</td></tr>
                       <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Thể Tích</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBag.theTich}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Ngày Điều Chế</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{formatMedicalDate(bloodBag.ngayDieuChe)}</td></tr>
                       <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Hạn Sử Dụng</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: '#BE1128', fontWeight: 'bold' }}>{formatMedicalDate(bloodBag.hanSuDung)}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Trạng Thái Kho</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold' }}>{bloodBag.trangThai}</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -206,7 +225,7 @@ function App() {
                       type="text" 
                       value={barcodeIn}
                       onChange={(e) => setBarcodeIn(e.target.value)}
-                      placeholder="Quét chuỗi QR/Mã vạch túi bù..."
+                      placeholder="Quét mã QR túi bù..."
                       style={{ flex: '1', padding: '10px 15px', fontSize: '16px', border: '1px solid #CED4DA', outline: 'none', backgroundColor: '#F8F9FA' }}
                     />
                     <button type="submit" style={{ padding: '0 25px', backgroundColor: '#28A745', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -228,11 +247,20 @@ function App() {
                             {bloodBagIn.nhomMau || '---'}
                           </div>
                         </div>
+                        
+                        {/* Bảng full chi tiết túi bù */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                           <tbody>
-                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '35%', fontWeight: 'bold' }}>Mã Túi Mới</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagIn.maTui}</td></tr>
+                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '35%', fontWeight: 'bold' }}>Mã Vạch Cấp</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagIn.maVach}</td></tr>
+                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Mã Túi Mới</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold' }}>{bloodBagIn.maTui}</td></tr>
                             <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Chế Phẩm</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagIn.loaiChePham}</td></tr>
-                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Thể Tích</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: messageIn.includes('LỆCH THỂ TÍCH') ? 'red' : 'inherit', fontWeight: messageIn.includes('LỆCH THỂ TÍCH') ? 'bold' : 'normal' }}>{bloodBagIn.theTich}</td></tr>
+                            <tr>
+                              <td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Thể Tích</td>
+                              <td style={{ padding: '8px', border: '1px solid #CED4DA', color: messageIn.includes('LỆCH THỂ TÍCH') ? 'red' : 'inherit', fontWeight: messageIn.includes('LỆCH THỂ TÍCH') ? 'bold' : 'normal' }}>
+                                {bloodBagIn.theTich}
+                              </td>
+                            </tr>
+                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Ngày Điều Chế</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{formatMedicalDate(bloodBagIn.ngayDieuChe)}</td></tr>
                             <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Hạn Sử Dụng</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: '#BE1128', fontWeight: 'bold' }}>{formatMedicalDate(bloodBagIn.hanSuDung)}</td></tr>
                           </tbody>
                         </table>
