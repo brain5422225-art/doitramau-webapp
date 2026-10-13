@@ -14,7 +14,7 @@ function App() {
   const [messageIn, setMessageIn] = useState('')
 
   // ĐIỀN ĐƯỜNG LINK API CỦA BẠN VÀO ĐÂY:
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxPzPgx4isUCFAARhaqgBvF2V_u3Hr2Xd8s8Ln1rpLIhlQkmJeuKKbkRAUWo4U9z5-q/exec'
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxNRYIbKKlDmJ-QIynXlQlm7vm1R2KL1shwC7pXddzGjGWECv3JgDblxvQ8OGLSbsaM/exec'
 
   const formatMedicalDate = (dateString: string) => {
     if (!dateString) return '---';
