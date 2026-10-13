@@ -1,73 +1,260 @@
-var SPREADSHEET_ID = '1658v2r89QpQtsU-LO_eC2HAIirs3P4HrKlljYcPDUlY'; 
-var SHEET_NAME = 'KHO MÁU'; // Đã cập nhật thành tên bảng thật
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import './App.css'
 
-function doGet(e) {
-  try {
-    var action = e.parameter.action;
-    var id = e.parameter.id;
+function App() {
+  const [barcode, setBarcode] = useState('')
+  const [bloodBag, setBloodBag] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
 
-    if (action === 'search' && id) {
-      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-      var sheet = ss.getSheetByName(SHEET_NAME);
-      
-      if (!sheet) return responseJSON({ status: 'error', message: 'Không tìm thấy bảng: ' + SHEET_NAME });
+  // State cho Túi Nhận (Bù)
+  const [barcodeIn, setBarcodeIn] = useState('')
+  const [bloodBagIn, setBloodBagIn] = useState<any>(null)
+  const [messageIn, setMessageIn] = useState('')
 
-      var data = sheet.getDataRange().getValues();
-      var headers = data[0]; 
+  // ĐIỀN ĐƯỜNG LINK API MỚI VÀO ĐÂY:
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxNRYIbKKlDmJ-QIynXlQlm7vm1R2KL1shwC7pXddzGjGWECv3JgDblxvQ8OGLSbsaM/exec'
+
+  const formatMedicalDate = (dateString: string) => {
+    if (!dateString) return '---';
+    if (dateString.includes('T')) {
+      const datePart = dateString.split('T')[0];
+      const [year, month, day] = datePart.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    return dateString;
+  }
+
+  // Xử lý quét túi xuất (Cột 1)
+  const handleScanOut = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!barcode) return
+    
+    setLoading(true)
+    setMessage('Đang truy xuất hệ thống...')
+    
+    try {
+      const response = await fetch(`${API_URL}?action=search&id=${barcode}`, {
+        method: 'GET',
+        redirect: 'follow'
+      })
+      const result = await response.json()
       
-      var colMaVach = -1, colMaTui = -1, colNhomMau = -1, colChePham = -1, colTheTich = -1;
-      var colNgayDC = -1, colHSD = -1, colTrangThai = -1;
-      
-      for (var c = 0; c < headers.length; c++) {
-        var h = String(headers[c]).trim().toLowerCase();
-        if (h === 'mã vạch quét') colMaVach = c;
-        if (h === 'mã túi máu') colMaTui = c;
-        if (h === 'nhóm máu') colNhomMau = c;
-        if (h === 'loại chế phẩm') colChePham = c;
-        if (h === 'thể tích') colTheTich = c;
-        if (h === 'ngày điều chế') colNgayDC = c;
-        if (h === 'hạn sử dụng') colHSD = c;
-        if (h === 'trạng thái') colTrangThai = c;
+      if (result.status === 'success' && result.data) {
+        setBloodBag(result.data)
+        setMessage('✅ TRUY XUẤT THÀNH CÔNG')
+        // Reset cột 2 khi quét túi mới
+        setBarcodeIn('')
+        setBloodBagIn(null)
+        setMessageIn('')
+      } else {
+        setBloodBag(null)
+        setMessage('❌ ' + result.message.toUpperCase())
       }
+    } catch (error) {
+      setMessage('❌ LỖI KẾT NỐI MẠNG BỆNH VIỆN')
+      setBloodBag(null)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      var result = null;
-      var searchId = String(id).trim().toLowerCase();
+  // Xử lý bóc tách chuỗi mã vạch túi nhận (Cột 2)
+  const handleScanIn = (e: FormEvent) => {
+    e.preventDefault()
+    if (!barcodeIn) return
 
-      for (var i = 1; i < data.length; i++) {
-        var cellMaVach = String(data[i][colMaVach] || '').trim().toLowerCase();
-        var cellMaTui = String(data[i][colMaTui] || '').trim().toLowerCase();
+    // Định dạng mong đợi: Mã vạch quét|Mã Túi Máu|Loại Chế Phẩm|Thể Tích|Nhóm Máu (chứa ABO/Rh)|Rh|Ngày Điều Chế|Hạn Sử Dụng
+    // Ví dụ: CD26-062923|CD26-062923|KHC|350|B/RH(+)|+|26/09/2026|07/11/2026
+    
+    const parts = barcodeIn.split('|');
+    
+    // Nếu quét chuỗi dài hợp lệ
+    if (parts.length >= 8) {
+      // Chuẩn hóa nhóm máu từ B/RH(+) thành B+ (hoặc theo logic của bạn)
+      let rawBloodGroup = parts[4];
+      let displayBloodGroup = rawBloodGroup.replace('/RH', '').replace('(+)', '+').replace('(-)', '-');
 
-        if (cellMaVach === searchId || cellMaTui === searchId) {
-          
-          var strNgayDC = (colNgayDC !== -1 && data[i][colNgayDC] instanceof Date) ? Utilities.formatDate(data[i][colNgayDC], Session.getScriptTimeZone(), "dd/MM/yyyy") : (data[i][colNgayDC] || '');
-          var strHSD = (colHSD !== -1 && data[i][colHSD] instanceof Date) ? Utilities.formatDate(data[i][colHSD], Session.getScriptTimeZone(), "dd/MM/yyyy") : (data[i][colHSD] || '');
+      const extractedData = {
+        maVach: parts[0],
+        maTui: parts[1],
+        loaiChePham: parts[2],
+        theTich: parts[3],
+        nhomMau: displayBloodGroup, 
+        ngayDieuChe: parts[6],
+        hanSuDung: parts[7],
+        trangThai: 'Tồn Kho (Dự kiến)' // Sẽ cập nhật khi lưu vào DB
+      };
+      
+      setBloodBagIn(extractedData);
+      
+      // KIỂM TRA ĐỐI CHIẾU AN TOÀN TRUYỀN MÁU
+      if (bloodBag) {
+        let isSafe = true;
+        let warningMsg = '';
 
-          result = {
-            maVach: data[i][colMaVach],
-            maTui: data[i][colMaTui],
-            nhomMau: data[i][colNhomMau],
-            loaiChePham: data[i][colChePham],
-            theTich: data[i][colTheTich],
-            ngayDieuChe: strNgayDC,
-            hanSuDung: strHSD,
-            trangThai: data[i][colTrangThai]
-          };
-          break;
+        // Tạm thời chuẩn hóa sơ bộ để so sánh (có thể cần điều chỉnh tùy dữ liệu thực tế)
+        const outNhomMau = (bloodBag.nhomMau || '').replace(/\s+/g, '').toUpperCase();
+        const inNhomMau = (displayBloodGroup || '').replace(/\s+/g, '').toUpperCase();
+
+        if (outNhomMau !== inNhomMau) {
+           isSafe = false;
+           warningMsg += 'CẢNH BÁO: BẤT ĐỒNG NHÓM MÁU. ';
+        }
+        
+        if (String(bloodBag.theTich) !== String(extractedData.theTich)) {
+           isSafe = false;
+           warningMsg += 'CẢNH BÁO: LỆCH THỂ TÍCH. ';
+        }
+
+        if (isSafe) {
+          setMessageIn('✅ THÔNG TIN KHỚP. ĐỦ ĐIỀU KIỆN ĐỔI.');
+        } else {
+          setMessageIn('❌ ' + warningMsg);
         }
       }
 
-      if (result) {
-        return responseJSON({ status: 'success', message: 'Tìm thấy thông tin túi máu!', data: result });
-      } else {
-        return responseJSON({ status: 'error', message: 'Không tồn tại mã: ' + id });
-      }
+    } else {
+       // Nếu quét bằng tay (không có dấu |)
+       setMessageIn('❌ ĐỊNH DẠNG MÃ VẠCH KHÔNG HỢP LỆ (Thiếu dấu |)');
+       setBloodBagIn(null);
     }
-    return responseJSON({ status: 'success', message: 'API Kết nối thành công!' });
-  } catch (error) {
-    return responseJSON({ status: 'error', message: 'Lỗi: ' + error.toString() });
   }
+
+  return (
+    <div style={{ backgroundColor: '#EAECEF', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
+      
+      {/* HEADER */}
+      <div style={{ backgroundColor: '#BE1128', color: 'white', padding: '15px 20px', boxShadow: '0 2px 5px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', letterSpacing: '1px', textTransform: 'uppercase' }}>HỆ THỐNG QUẢN LÝ NGÂN HÀNG MÁU</h1>
+          <div style={{ fontSize: '13px', marginTop: '4px', opacity: 0.9 }}>KHOA XÉT NGHIỆM - PHÂN HỆ ĐỔI TRẢ & ĐIỀU CHUYỂN</div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '1200px', margin: '30px auto', padding: '0 20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '30px' }}>
+          
+          {/* ================= CỘT 1: TÚI MÁU XUẤT ================= */}
+          <div style={{ backgroundColor: '#fff', border: '1px solid #CED4DA', borderTop: '4px solid #BE1128', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <div style={{ backgroundColor: '#F8F9FA', padding: '15px 20px', borderBottom: '1px solid #CED4DA' }}>
+              <h2 style={{ margin: 0, fontSize: '16px', color: '#495057', fontWeight: 'bold' }}>
+                <span style={{ color: '#BE1128', marginRight: '8px' }}>■</span> KHUNG QUÉT TÚI MÁU XUẤT
+              </h2>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <form onSubmit={handleScanOut} style={{ display: 'flex', gap: '0', marginBottom: '20px' }}>
+                <input 
+                  type="text" 
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  placeholder="Quét mã vạch túi xuất đi..."
+                  style={{ flex: '1', padding: '10px 15px', fontSize: '16px', border: '1px solid #CED4DA', outline: 'none' }}
+                  autoFocus
+                />
+                <button type="submit" disabled={loading} style={{ padding: '0 25px', backgroundColor: loading ? '#6C757D' : '#0056B3', color: 'white', border: 'none', cursor: loading ? 'wait' : 'pointer', fontWeight: 'bold' }}>
+                  {loading ? 'Đang xử lý...' : 'Truy xuất'}
+                </button>
+              </form>
+
+              {message && (
+                <div style={{ padding: '10px 15px', backgroundColor: message.includes('❌') ? '#F8D7DA' : '#D4EDDA', color: message.includes('❌') ? '#721C24' : '#155724', marginBottom: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                  {message}
+                </div>
+              )}
+
+              {bloodBag && (
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ textAlign: 'center', padding: '15px 0', border: '1px solid #CED4DA', backgroundColor: '#F8F9FA', marginBottom: '15px' }}>
+                    <div style={{ fontSize: '12px', color: '#6C757D', fontWeight: 'bold' }}>NHÓM MÁU</div>
+                    <div style={{ fontSize: '42px', fontWeight: '900', color: '#BE1128', marginTop: '5px' }}>{bloodBag.nhomMau || '---'}</div>
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                    <tbody>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '35%', fontWeight: 'bold' }}>Mã Túi</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBag.maTui}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Chế Phẩm</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBag.loaiChePham}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Thể Tích</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBag.theTich}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Hạn Sử Dụng</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: '#BE1128', fontWeight: 'bold' }}>{formatMedicalDate(bloodBag.hanSuDung)}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ================= CỘT 2: TÚI MÁU BÙ ================= */}
+          <div style={{ backgroundColor: '#fff', border: '1px solid #CED4DA', borderTop: '4px solid #0056B3', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', opacity: bloodBag ? 1 : 0.6, pointerEvents: bloodBag ? 'auto' : 'none' }}>
+            
+            <div style={{ backgroundColor: '#F8F9FA', padding: '15px 20px', borderBottom: '1px solid #CED4DA' }}>
+              <h2 style={{ margin: 0, fontSize: '16px', color: '#495057', fontWeight: 'bold' }}>
+                <span style={{ color: '#0056B3', marginRight: '8px' }}>■</span> KHUNG QUÉT TÚI NHẬN BÙ (THÔNG TIN MỚI)
+              </h2>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              {!bloodBag ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6C757D' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '10px' }}>🔒</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>YÊU CẦU TRUY XUẤT TÚI XUẤT ĐI TRƯỚC</div>
+                </div>
+              ) : (
+                <div>
+                  <form onSubmit={handleScanIn} style={{ display: 'flex', gap: '0', marginBottom: '20px' }}>
+                    <input 
+                      type="text" 
+                      value={barcodeIn}
+                      onChange={(e) => setBarcodeIn(e.target.value)}
+                      placeholder="Quét chuỗi QR/Mã vạch túi bù..."
+                      style={{ flex: '1', padding: '10px 15px', fontSize: '16px', border: '1px solid #CED4DA', outline: 'none', backgroundColor: '#F8F9FA' }}
+                    />
+                    <button type="submit" style={{ padding: '0 25px', backgroundColor: '#28A745', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                      Bóc tách
+                    </button>
+                  </form>
+
+                  {messageIn && (
+                    <div style={{ padding: '10px 15px', backgroundColor: messageIn.includes('❌') ? '#F8D7DA' : '#D4EDDA', color: messageIn.includes('❌') ? '#721C24' : '#155724', marginBottom: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                      {messageIn}
+                    </div>
+                  )}
+
+                  {bloodBagIn && (
+                     <div style={{ marginTop: '10px' }}>
+                        <div style={{ textAlign: 'center', padding: '15px 0', border: '1px solid #CED4DA', backgroundColor: '#F8F9FA', marginBottom: '15px' }}>
+                          <div style={{ fontSize: '12px', color: '#6C757D', fontWeight: 'bold' }}>NHÓM MÁU TÚI BÙ</div>
+                          <div style={{ fontSize: '42px', fontWeight: '900', color: messageIn.includes('❌') ? '#BE1128' : '#28A745', marginTop: '5px' }}>
+                            {bloodBagIn.nhomMau || '---'}
+                          </div>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                          <tbody>
+                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '35%', fontWeight: 'bold' }}>Mã Túi Mới</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagIn.maTui}</td></tr>
+                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Chế Phẩm</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagIn.loaiChePham}</td></tr>
+                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Thể Tích</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: messageIn.includes('LỆCH THỂ TÍCH') ? 'red' : 'inherit', fontWeight: messageIn.includes('LỆCH THỂ TÍCH') ? 'bold' : 'normal' }}>{bloodBagIn.theTich}</td></tr>
+                            <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Hạn Sử Dụng</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: '#BE1128', fontWeight: 'bold' }}>{formatMedicalDate(bloodBagIn.hanSuDung)}</td></tr>
+                          </tbody>
+                        </table>
+
+                        {/* Nút lưu dữ liệu */}
+                        {!messageIn.includes('❌') && (
+                          <button style={{ marginTop: '20px', width: '100%', padding: '12px', backgroundColor: '#0056B3', color: 'white', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>
+                            XÁC NHẬN ĐỔI MÁU & GHI DATABASE
+                          </button>
+                        )}
+                     </div>
+                  )}
+
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  )
 }
 
-function responseJSON(data) {
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-}
+export default App
