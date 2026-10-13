@@ -55,7 +55,7 @@ function App() {
           <h1 style={{ color: '#1890ff', margin: '0 0 10px 0', fontSize: '28px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>
             🏥 HỆ THỐNG QUẢN LÝ ĐỔI & MƯỢN MÁU
           </h1>
-          <p style={{ color: '#595959', fontSize: '16px', margin: 0, fontWeight: '500' }}>Khoa Xét nghiệm - Bệnh viện Đa khoa</p>
+          <p style={{ color: '#595959', fontSize: '16px', margin: 0, fontWeight: '500' }}>Khoa Xét nghiệm - Bệnh viện Đa khoa Cà Mau</p>
         </div>
 
         {/* --- KHUNG LÀM VIỆC CHÍNH --- */}
