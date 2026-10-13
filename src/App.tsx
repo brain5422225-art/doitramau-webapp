@@ -4,7 +4,7 @@ import './App.css'
 function App() {
   const [message, setMessage] = useState('')
   // Dán đường link API MỚI của bạn vào đây:
-  const API_URL = 'https://script.google.com/macros/s/AKfycbyf-4M8YuFIbrKMfLVKprKUih5agC3Oh9n13_ZWnrwPJ5ZpdoWy67OfHxvEn60RZjQN/exec'
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyI3PGbU8yVF2tZnY5A10H7Eit_36ov9-3POwsxvRAJF54wvAD7xn_yr42cPNyYICGH/exec'
 
   const testAPI = async () => {
     setMessage('Đang gọi về Google Sheets...')
