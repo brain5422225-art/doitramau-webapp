@@ -279,4 +279,98 @@ function App() {
             <div style={{ backgroundColor: '#fff', border: '1px solid #CED4DA', borderTop: '4px solid #BE1128', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', opacity: bloodBagOut ? 1 : 0.5, pointerEvents: bloodBagOut ? 'auto' : 'none' }}>
               <h3 style={{ marginTop: 0, color: '#495057' }}>2. HOÀN THIỆN BIÊN BẢN</h3>
               
-              <div style={{ display: '
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Nhân viên thực hiện (Bên giao)</label>
+                  <select value={formOut.daiDienGiao} onChange={(e) => setFormOut({...formOut, daiDienGiao: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px' }}>
+                    <option value="Phạm Minh Mẫn">Phạm Minh Mẫn</option>
+                    <option value="Thái Trường Trọng Tín">Thái Trường Trọng Tín</option>
+                    <option value="Huỳnh Thanh Tòng">Huỳnh Thanh Tòng</option>
+                    <option value="Lâm Khánh Hưng">Lâm Khánh Hưng</option>
+                    <option value="Nguyễn Minh Duy">Nguyễn Minh Duy</option>
+                    <option value="Nguyễn Quang Thiện">Nguyễn Quang Thiện</option>
+                    <option value="Trần Lâm">Trần Lâm</option>
+                    <option value="Huỳnh Nam">Huỳnh Nam</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Lý do xuất</label>
+                  <select value={formOut.mucDich} onChange={(e) => setFormOut({...formOut, mucDich: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px' }}>
+                    <option value="Cho mượn máu/chế phẩm máu giữa các đơn vị">Cho mượn máu</option>
+                    <option value="Đổi trả máu/chế phẩm máu do vấn đề chất lượng">Đổi trả máu</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Đơn vị nhận (Bệnh viện / Khoa phòng)</label>
+                <input type="text" value={formOut.donViNhan} onChange={(e) => setFormOut({...formOut, donViNhan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="VD: Bệnh viện HTTM Cần Thơ" />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Người nhận</label>
+                  <input type="text" value={formOut.daiDienNhan} onChange={(e) => setFormOut({...formOut, daiDienNhan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Chức vụ</label>
+                  <input type="text" value={formOut.chucVuNhan} onChange={(e) => setFormOut({...formOut, chucVuNhan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Thành phần khác</label>
+                  <input type="text" value={formOut.thanhPhanKhac} onChange={(e) => setFormOut({...formOut, thanhPhanKhac: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Không có" />
+                </div>
+              </div>
+
+              <div style={{ padding: '15px', backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF', borderRadius: '4px', marginBottom: '20px' }}>
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Tình trạng túi máu</label>
+                      <input type="text" value={formOut.tinhTrangTuiMau} onChange={(e) => setFormOut({...formOut, tinhTrangTuiMau: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
+                      <div style={{ fontSize: '11px', color: '#ADB5BD', marginTop: '2px' }}>* VD: Nguyên vẹn, không bọt khí...</div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Điều kiện bảo quản / Vận chuyển</label>
+                      <input type="text" value={formOut.dieuKienBaoQuan} onChange={(e) => setFormOut({...formOut, dieuKienBaoQuan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
+                      <div style={{ fontSize: '11px', color: '#ADB5BD', marginTop: '2px' }}>* VD: Đạt yêu cầu quy định...</div>
+                    </div>
+                 </div>
+                 
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Diễn biến / Lý do chi tiết</label>
+                      <input type="text" value={formOut.lyDo} onChange={(e) => setFormOut({...formOut, lyDo: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Không có" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Ý kiến đề nghị</label>
+                      <input type="text" value={formOut.yKienDeNghi} onChange={(e) => setFormOut({...formOut, yKienDeNghi: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Bỏ trống" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Ghi chú thêm</label>
+                      <input type="text" value={formOut.ghiChu} onChange={(e) => setFormOut({...formOut, ghiChu: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Bỏ trống" />
+                    </div>
+                 </div>
+              </div>
+
+              <button onClick={handleExportPDFOut} disabled={loading} style={{ width: '100%', padding: '14px', backgroundColor: loading ? '#6C757D' : '#0056B3', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', cursor: loading ? 'wait' : 'pointer' }}>
+                {loading ? 'ĐANG XỬ LÝ & TẠO FILE...' : '🖨️ XÁC NHẬN XUẤT MÁU & IN BIÊN BẢN'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TAB 2: NHẬN ==================== */}
+        {activeTab === 'NHAN' && (
+          <div style={{ backgroundColor: '#fff', border: '1px solid #CED4DA', borderTop: '4px solid #0056B3', padding: '30px', textAlign: 'center', color: '#6C757D', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <div style={{ fontSize: '48px', marginBottom: '15px' }}>🚧</div>
+            <h2 style={{ margin: '0 0 10px 0', color: '#495057' }}>TAB NHẬN BÙ (ĐANG XÂY DỰNG)</h2>
+            <p>Chúng ta sẽ hoàn thiện nốt luồng in PDF cho Tab Xuất.<br/>Sau khi OK, tính năng Nhận Bù sẽ được thiết lập tương tự!</p>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+export default App
