@@ -22,14 +22,9 @@ function App() {
     donViNhan: '',
     daiDienNhan: '',
     chucVuNhan: '',
-    daiDienGiao: 'Nguyễn Văn A', // Bạn có thể lấy từ hệ thống đăng nhập
+    daiDienGiao: 'Nguyễn Văn A', 
     chucVuGiao: 'Cử nhân XN'
   })
-
-  // === STATE CHO TAB 2: NHẬN BÙ ===
-  const [barcodeIn, setBarcodeIn] = useState('')
-  const [bloodBagIn, setBloodBagIn] = useState<any>(null)
-  const [oldBagRef, setOldBagRef] = useState<any>(null) // Túi cũ cần đối chiếu
 
   const formatMedicalDate = (dateString: string) => {
     if (!dateString) return '---';
@@ -88,7 +83,7 @@ function App() {
     
     // Đóng gói dữ liệu gửi lên Apps Script để chèn vào {{...}}
     const payloadData = {
-      SoBienBan: bloodBagOut.maTui, // Lấy mã túi làm số biên bản tạm
+      SoBienBan: bloodBagOut.maTui, 
       KinhGui: formOut.donViNhan,
       Gio: String(now.getHours()).padStart(2, '0'),
       Phut: String(now.getMinutes()).padStart(2, '0'),
@@ -130,7 +125,6 @@ function App() {
       if (result.status === 'success') {
         setPdfUrl(result.pdfUrl);
         setMessage('✅ TẠO BIÊN BẢN THÀNH CÔNG! Bấm vào link bên dưới để in.');
-        // TODO: Hàm này sau sẽ thêm lệnh gọi DB để cập nhật trạng thái
       } else {
         setMessage('❌ ' + result.message);
       }
@@ -138,35 +132,6 @@ function App() {
       setMessage('❌ LỖI TẠO PDF');
     } finally {
       setLoading(false);
-    }
-  }
-
-
-  // --- HÀM TAB 2: QUÉT MÃ VẠCH TÚI BÙ ---
-  const handleScanIn = (e: FormEvent) => {
-    e.preventDefault()
-    if (!barcodeIn) return
-    
-    const parts = barcodeIn.split('|');
-    if (parts.length >= 8) {
-      let abo = parts[4].replace('/RH', '').replace(/\(\+\)/g, '').replace(/\(-\)/g, '').trim();
-      let rh = parts[5].trim();
-      if (abo.endsWith('+') || abo.endsWith('-')) rh = ''; 
-      
-      const extractedData = {
-        maVach: parts[0],
-        maTui: parts[1],
-        loaiChePham: parts[2],
-        theTich: parts[3],
-        nhomMau: `${abo}${rh}`, 
-        ngayDieuChe: parts[6],
-        hanSuDung: parts[7]
-      };
-      setBloodBagIn(extractedData);
-      setMessage('✅ BÓC TÁCH MÃ QR THÀNH CÔNG. Đang đợi đối chiếu túi cũ...');
-    } else {
-       setMessage('❌ ĐỊNH DẠNG MÃ QR TÚI BÙ KHÔNG HỢP LỆ');
-       setBloodBagIn(null);
     }
   }
 
