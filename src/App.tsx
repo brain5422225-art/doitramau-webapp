@@ -28,9 +28,11 @@ function App() {
     tinhTrangTuiMau: 'Nguyên vẹn, không bọt khí, không đông dây, đúng nhãn',
     dieuKienBaoQuan: 'Đạt yêu cầu quy định',
     lyDo: '',
+    yKienDeNghi: '', // Thêm trường Ý kiến đề nghị
     ghiChu: ''
   })
 
+  // Hàm định dạng ngày tháng
   const formatMedicalDate = (dateString: string) => {
     if (!dateString) return '---';
     if (dateString.includes('T')) {
@@ -39,6 +41,28 @@ function App() {
       return `${day}/${month}/${year}`;
     }
     return dateString;
+  }
+
+  // Hàm kiểm tra túi máu hết date
+  const checkExpired = (dateString: string) => {
+    if (!dateString || dateString === '---') return false;
+    try {
+      let day, month, year;
+      if (dateString.includes('/')) {
+        [day, month, year] = dateString.split('/');
+      } else if (dateString.includes('-')) {
+        const datePart = dateString.split('T')[0];
+        [year, month, day] = datePart.split('-');
+      } else {
+        return false;
+      }
+      // Set thời gian hết hạn là cuối ngày hôm đó (23:59:59)
+      const expDate = new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 59);
+      const now = new Date();
+      return expDate.getTime() < now.getTime();
+    } catch (e) {
+      return false;
+    }
   }
 
   // --- HÀM TAB 1: TÌM TÚI XUẤT ---
@@ -86,21 +110,19 @@ function App() {
     
     // Xử lý logic thời gian tự động cộng 30 phút
     const now = new Date();
-    const endDate = new Date(now.getTime() + 30 * 60000); // Cộng thêm 30 phút
+    const endDate = new Date(now.getTime() + 30 * 60000); 
     
     // Đóng gói dữ liệu gửi lên Apps Script
     const payloadData = {
       SoBienBan: bloodBagOut.maTui, 
       KinhGui: formOut.donViNhan,
       
-      // Thời gian bắt đầu
       Gio: String(now.getHours()).padStart(2, '0'),
       Phut: String(now.getMinutes()).padStart(2, '0'),
       Ngay: String(now.getDate()).padStart(2, '0'),
       Thang: String(now.getMonth() + 1).padStart(2, '0'),
       Nam: String(now.getFullYear()).slice(-2),
       
-      // Thời gian kết thúc (+30p)
       GioKetThuc: String(endDate.getHours()).padStart(2, '0'),
       PhutKetThuc: String(endDate.getMinutes()).padStart(2, '0'),
       
@@ -132,6 +154,7 @@ function App() {
       TinhTrangTuiMau: formOut.tinhTrangTuiMau,
       DieuKienBaoQuan: formOut.dieuKienBaoQuan,
       LyDo: formOut.lyDo.trim() !== '' ? formOut.lyDo : 'Không có',
+      YKienDeNghi: formOut.yKienDeNghi.trim() !== '' ? formOut.yKienDeNghi : '', // Map biến Ý kiến đề nghị
       GhiChu: formOut.ghiChu.trim() !== '' ? formOut.ghiChu : '',
       
       SoBan: '02'
@@ -223,15 +246,32 @@ function App() {
               </form>
 
               {bloodBagOut && (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                  <tbody>
-                    <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Nhóm Máu</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold', color: '#BE1128', fontSize: '18px' }}>{bloodBagOut.nhomMau}</td></tr>
-                    <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '40%' }}>Mã Túi Máu</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold' }}>{bloodBagOut.maTui}</td></tr>
-                    <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Chế Phẩm</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagOut.loaiChePham}</td></tr>
-                    <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Thể Tích</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagOut.theTich}</td></tr>
-                    <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Hạn Sử Dụng</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: '#BE1128' }}>{formatMedicalDate(bloodBagOut.hanSuDung)}</td></tr>
-                  </tbody>
-                </table>
+                <div style={{ marginTop: '10px' }}>
+                  
+                  {/* Cảnh báo túi máu hết date */}
+                  {checkExpired(bloodBagOut.hanSuDung) && (
+                     <div style={{ padding: '12px', backgroundColor: '#FFF2F0', border: '1px solid #FFCCC7', color: '#CF1322', fontWeight: 'bold', marginBottom: '15px', borderRadius: '4px', textAlign: 'center', fontSize: '13px', boxShadow: '0 2px 4px rgba(207, 19, 34, 0.1)' }}>
+                        ⚠️ CẢNH BÁO MỨC ĐỘ CAO: TÚI MÁU NÀY ĐÃ HẾT HẠN SỬ DỤNG!
+                     </div>
+                  )}
+
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                    <tbody>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Nhóm Máu</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold', color: '#BE1128', fontSize: '18px' }}>{bloodBagOut.nhomMau}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '40%' }}>Mã Túi Máu</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold' }}>{bloodBagOut.maTui}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Chế Phẩm</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagOut.loaiChePham}</td></tr>
+                      <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Thể Tích</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagOut.theTich}</td></tr>
+                      <tr>
+                        <td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: checkExpired(bloodBagOut.hanSuDung) ? 'bold' : 'normal', color: checkExpired(bloodBagOut.hanSuDung) ? '#CF1322' : 'inherit' }}>
+                           Hạn Sử Dụng
+                        </td>
+                        <td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: checkExpired(bloodBagOut.hanSuDung) ? 'bold' : 'normal', color: checkExpired(bloodBagOut.hanSuDung) ? '#CF1322' : '#262626' }}>
+                           {formatMedicalDate(bloodBagOut.hanSuDung)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
@@ -282,10 +322,14 @@ function App() {
                     </div>
                  </div>
                  
-                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Diễn biến / Lý do chi tiết (Nếu có)</label>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Lý do chi tiết</label>
                       <input type="text" value={formOut.lyDo} onChange={(e) => setFormOut({...formOut, lyDo: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Không có" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Ý kiến đề nghị</label>
+                      <input type="text" value={formOut.yKienDeNghi} onChange={(e) => setFormOut({...formOut, yKienDeNghi: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Bỏ trống" />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Ghi chú thêm</label>
