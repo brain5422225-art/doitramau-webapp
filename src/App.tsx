@@ -12,7 +12,7 @@ function App() {
   const [pdfUrl, setPdfUrl] = useState('')
 
   // LƯU Ý: THAY API MỚI VÀO ĐÂY LẦN CUỐI
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxPzPgx4isUCFAARhaqgBvF2V_u3Hr2Xd8s8Ln1rpLIhlQkmJeuKKbkRAUWo4U9z5-q/exec'
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxNRYIbKKlDmJ-QIynXlQlm7vm1R2KL1shwC7pXddzGjGWECv3JgDblxvQ8OGLSbsaM/exec'
 
   // === TAB 1: XUẤT ===
   const [barcodeOut, setBarcodeOut] = useState('')
