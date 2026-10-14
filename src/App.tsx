@@ -9,21 +9,26 @@ function App() {
   const [message, setMessage] = useState('')
   const [pdfUrl, setPdfUrl] = useState('')
 
-  // ĐIỀN ĐƯỜNG LINK API MỚI NHẤT VÀO ĐÂY:
+  // ĐIỀN ĐƯỜNG LINK API CỦA BẠN VÀO ĐÂY:
   const API_URL = 'https://script.google.com/macros/s/AKfycbxNRYIbKKlDmJ-QIynXlQlm7vm1R2KL1shwC7pXddzGjGWECv3JgDblxvQ8OGLSbsaM/exec'
 
   // === STATE CHO TAB 1: XUẤT CHO MƯỢN / ĐỔI TRẢ ===
   const [barcodeOut, setBarcodeOut] = useState('')
   const [bloodBagOut, setBloodBagOut] = useState<any>(null)
   
-  // Thông tin biên bản (TAB 1)
+  // Thông tin biên bản nâng cao (TAB 1)
   const [formOut, setFormOut] = useState({
     mucDich: 'Cho mượn máu/chế phẩm máu giữa các đơn vị',
     donViNhan: '',
     daiDienNhan: '',
     chucVuNhan: '',
+    thanhPhanKhac: '',
     daiDienGiao: 'Nguyễn Văn A', 
-    chucVuGiao: 'Cử nhân XN'
+    chucVuGiao: 'Cử nhân XN',
+    tinhTrangTuiMau: 'Nguyên vẹn, không bọt khí, không đông dây, đúng nhãn',
+    dieuKienBaoQuan: 'Đạt yêu cầu quy định',
+    lyDo: '',
+    ghiChu: ''
   })
 
   const formatMedicalDate = (dateString: string) => {
@@ -79,38 +84,56 @@ function App() {
     setLoading(true)
     setMessage('Đang tạo Biên bản PDF và cập nhật hệ thống...')
     
+    // Xử lý logic thời gian tự động cộng 30 phút
     const now = new Date();
+    const endDate = new Date(now.getTime() + 30 * 60000); // Cộng thêm 30 phút
     
-    // Đóng gói dữ liệu gửi lên Apps Script để chèn vào {{...}}
+    // Đóng gói dữ liệu gửi lên Apps Script
     const payloadData = {
       SoBienBan: bloodBagOut.maTui, 
       KinhGui: formOut.donViNhan,
+      
+      // Thời gian bắt đầu
       Gio: String(now.getHours()).padStart(2, '0'),
       Phut: String(now.getMinutes()).padStart(2, '0'),
       Ngay: String(now.getDate()).padStart(2, '0'),
       Thang: String(now.getMonth() + 1).padStart(2, '0'),
       Nam: String(now.getFullYear()).slice(-2),
+      
+      // Thời gian kết thúc (+30p)
+      GioKetThuc: String(endDate.getHours()).padStart(2, '0'),
+      PhutKetThuc: String(endDate.getMinutes()).padStart(2, '0'),
+      
       NgayHienTai: String(now.getDate()).padStart(2, '0'),
       ThangHienTai: String(now.getMonth() + 1).padStart(2, '0'),
       NamHienTai: String(now.getFullYear()).slice(-2),
       DiaDiem: 'Khoa Xét nghiệm Bệnh viện Đa khoa Cà Mau',
+      
       CheckDoiTra: formOut.mucDich.includes('Đổi trả') ? '☒' : '☐',
       CheckChoMuon: formOut.mucDich.includes('Cho mượn') ? '☒' : '☐',
       CheckHoanTra: '☐',
+      
       DonViGiao: 'Khoa Xét Nghiệm - BVĐK Cà Mau',
       DaiDienGiao: formOut.daiDienGiao,
       ChucVuGiao: formOut.chucVuGiao,
+      
       DonViNhan: formOut.donViNhan,
       DaiDienNhan: formOut.daiDienNhan,
       ChucVuNhan: formOut.chucVuNhan,
+      ThanhPhanKhac: formOut.thanhPhanKhac.trim() !== '' ? formOut.thanhPhanKhac : 'Không có',
+      
       MaTui: bloodBagOut.maTui,
       ChePham: bloodBagOut.loaiChePham,
       NhomMau: bloodBagOut.nhomMau,
       TheTich: bloodBagOut.theTich,
       NgayDieuChe: formatMedicalDate(bloodBagOut.ngayDieuChe),
       HanSuDung: formatMedicalDate(bloodBagOut.hanSuDung),
-      TinhTrangTuiMau: 'Nguyên vẹn, không bọt khí, đúng nhãn',
-      DieuKienBaoQuan: 'Đạt yêu cầu quy định',
+      
+      TinhTrangTuiMau: formOut.tinhTrangTuiMau,
+      DieuKienBaoQuan: formOut.dieuKienBaoQuan,
+      LyDo: formOut.lyDo.trim() !== '' ? formOut.lyDo : 'Không có',
+      GhiChu: formOut.ghiChu.trim() !== '' ? formOut.ghiChu : '',
+      
       SoBan: '02'
     };
 
@@ -146,7 +169,7 @@ function App() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '1000px', margin: '30px auto', padding: '0 20px' }}>
+      <div style={{ maxWidth: '1200px', margin: '30px auto', padding: '0 20px' }}>
         
         {/* NÚT CHUYỂN TAB */}
         <div style={{ display: 'flex', marginBottom: '20px', gap: '10px' }}>
@@ -181,7 +204,7 @@ function App() {
 
         {/* ==================== TAB 1: XUẤT ==================== */}
         {activeTab === 'XUAT' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '20px' }}>
             
             {/* Cột Trái: Quét túi */}
             <div style={{ backgroundColor: '#fff', border: '1px solid #CED4DA', borderTop: '4px solid #BE1128', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
@@ -205,30 +228,32 @@ function App() {
                     <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', fontWeight: 'bold' }}>Nhóm Máu</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold', color: '#BE1128', fontSize: '18px' }}>{bloodBagOut.nhomMau}</td></tr>
                     <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5', width: '40%' }}>Mã Túi Máu</td><td style={{ padding: '8px', border: '1px solid #CED4DA', fontWeight: 'bold' }}>{bloodBagOut.maTui}</td></tr>
                     <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Chế Phẩm</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagOut.loaiChePham}</td></tr>
+                    <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Thể Tích</td><td style={{ padding: '8px', border: '1px solid #CED4DA' }}>{bloodBagOut.theTich}</td></tr>
                     <tr><td style={{ padding: '8px', border: '1px solid #CED4DA', backgroundColor: '#F1F3F5' }}>Hạn Sử Dụng</td><td style={{ padding: '8px', border: '1px solid #CED4DA', color: '#BE1128' }}>{formatMedicalDate(bloodBagOut.hanSuDung)}</td></tr>
                   </tbody>
                 </table>
               )}
             </div>
 
-            {/* Cột Phải: Thông tin biên bản */}
+            {/* Cột Phải: Thông tin biên bản CHUYÊN SÂU */}
             <div style={{ backgroundColor: '#fff', border: '1px solid #CED4DA', borderTop: '4px solid #BE1128', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', opacity: bloodBagOut ? 1 : 0.5, pointerEvents: bloodBagOut ? 'auto' : 'none' }}>
-              <h3 style={{ marginTop: 0, color: '#495057' }}>2. THÔNG TIN BIÊN BẢN</h3>
+              <h3 style={{ marginTop: 0, color: '#495057' }}>2. HOÀN THIỆN BIÊN BẢN</h3>
               
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Lý do xuất</label>
-                <select value={formOut.mucDich} onChange={(e) => setFormOut({...formOut, mucDich: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px' }}>
-                  <option value="Cho mượn máu/chế phẩm máu giữa các đơn vị">Cho mượn máu</option>
-                  <option value="Đổi trả máu/chế phẩm máu do vấn đề chất lượng">Đổi trả máu</option>
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Lý do xuất</label>
+                  <select value={formOut.mucDich} onChange={(e) => setFormOut({...formOut, mucDich: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px' }}>
+                    <option value="Cho mượn máu/chế phẩm máu giữa các đơn vị">Cho mượn máu</option>
+                    <option value="Đổi trả máu/chế phẩm máu do vấn đề chất lượng">Đổi trả máu</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Đơn vị nhận (Bệnh viện / Khoa)</label>
+                  <input type="text" value={formOut.donViNhan} onChange={(e) => setFormOut({...formOut, donViNhan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="VD: Bệnh viện HTTM Cần Thơ" />
+                </div>
               </div>
 
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Đơn vị nhận (Bệnh viện / Khoa phòng)</label>
-                <input type="text" value={formOut.donViNhan} onChange={(e) => setFormOut({...formOut, donViNhan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="VD: Bệnh viện HTTM Cần Thơ" />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '15px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Người nhận</label>
                   <input type="text" value={formOut.daiDienNhan} onChange={(e) => setFormOut({...formOut, daiDienNhan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
@@ -237,10 +262,40 @@ function App() {
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Chức vụ</label>
                   <input type="text" value={formOut.chucVuNhan} onChange={(e) => setFormOut({...formOut, chucVuNhan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Thành phần khác</label>
+                  <input type="text" value={formOut.thanhPhanKhac} onChange={(e) => setFormOut({...formOut, thanhPhanKhac: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Không có" />
+                </div>
               </div>
 
-              <button onClick={handleExportPDFOut} disabled={loading} style={{ width: '100%', padding: '12px', backgroundColor: loading ? '#6C757D' : '#0056B3', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', fontSize: '14px', cursor: loading ? 'wait' : 'pointer' }}>
-                {loading ? 'ĐANG XỬ LÝ...' : 'XUẤT MÁU & IN BIÊN BẢN PDF'}
+              <div style={{ padding: '15px', backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF', borderRadius: '4px', marginBottom: '20px' }}>
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Tình trạng túi máu</label>
+                      <input type="text" value={formOut.tinhTrangTuiMau} onChange={(e) => setFormOut({...formOut, tinhTrangTuiMau: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
+                      <div style={{ fontSize: '11px', color: '#ADB5BD', marginTop: '2px' }}>* VD: Nguyên vẹn, không bọt khí...</div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Điều kiện bảo quản / Vận chuyển</label>
+                      <input type="text" value={formOut.dieuKienBaoQuan} onChange={(e) => setFormOut({...formOut, dieuKienBaoQuan: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} />
+                      <div style={{ fontSize: '11px', color: '#ADB5BD', marginTop: '2px' }}>* VD: Đạt yêu cầu quy định...</div>
+                    </div>
+                 </div>
+                 
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Diễn biến / Lý do chi tiết (Nếu có)</label>
+                      <input type="text" value={formOut.lyDo} onChange={(e) => setFormOut({...formOut, lyDo: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Không có" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#6C757D', marginBottom: '4px' }}>Ghi chú thêm</label>
+                      <input type="text" value={formOut.ghiChu} onChange={(e) => setFormOut({...formOut, ghiChu: e.target.value})} style={{ width: '100%', padding: '8px', border: '1px solid #CED4DA', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Để trống -> Bỏ trống" />
+                    </div>
+                 </div>
+              </div>
+
+              <button onClick={handleExportPDFOut} disabled={loading} style={{ width: '100%', padding: '14px', backgroundColor: loading ? '#6C757D' : '#0056B3', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', cursor: loading ? 'wait' : 'pointer' }}>
+                {loading ? 'ĐANG XỬ LÝ & TẠO FILE...' : '🖨️ XÁC NHẬN XUẤT MÁU & IN BIÊN BẢN'}
               </button>
             </div>
           </div>
@@ -251,7 +306,7 @@ function App() {
           <div style={{ backgroundColor: '#fff', border: '1px solid #CED4DA', borderTop: '4px solid #0056B3', padding: '30px', textAlign: 'center', color: '#6C757D', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <div style={{ fontSize: '48px', marginBottom: '15px' }}>🚧</div>
             <h2 style={{ margin: '0 0 10px 0', color: '#495057' }}>TAB NHẬN BÙ (ĐANG XÂY DỰNG)</h2>
-            <p>Chúng ta sẽ test tính năng IN PDF ở Tab XUẤT trước.<br/>Khi PDF chạy hoàn hảo, tôi sẽ hoàn thiện nốt Tab này cho bạn!</p>
+            <p>Chúng ta sẽ hoàn thiện nốt luồng in PDF cho Tab Xuất.<br/>Sau khi OK, tính năng Nhận Bù sẽ được thiết lập tương tự!</p>
           </div>
         )}
 
